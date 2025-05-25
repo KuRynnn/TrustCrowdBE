@@ -12,6 +12,10 @@ class UATTask extends BaseModel
         'test_id',
         'worker_id',
         'status',
+        'revision_count',
+        'revision_status',
+        'revision_comments',
+        'last_revised_at',
         'started_at',
         'completed_at'
     ];
@@ -19,8 +23,25 @@ class UATTask extends BaseModel
     protected $casts = [
         'started_at' => 'datetime',
         'completed_at' => 'datetime',
-        'status' => 'string'
+        'last_revised_at' => 'datetime',
+        'status' => 'string',
+        'revision_status' => 'string',
+        'revision_count' => 'integer'
     ];
+
+    // Define status constants
+    const STATUS_ASSIGNED = 'Assigned';
+    const STATUS_IN_PROGRESS = 'In Progress';
+    const STATUS_COMPLETED = 'Completed';
+    const STATUS_REVISION_REQUIRED = 'Revision Required';
+    const STATUS_VERIFIED = 'Verified';
+    const STATUS_REJECTED = 'Rejected';
+
+    // Define revision status constants
+    const REVISION_NONE = 'None';
+    const REVISION_REQUESTED = 'Requested';
+    const REVISION_IN_PROGRESS = 'In Progress';
+    const REVISION_COMPLETED = 'Completed';
 
     public function application()
     {
@@ -45,5 +66,23 @@ class UATTask extends BaseModel
     public function taskValidation()
     {
         return $this->hasOne(TaskValidation::class, 'task_id');
+    }
+
+    // Get original bug reports (not revisions)
+    public function originalBugReports()
+    {
+        return $this->bugReports()->where('is_revision', false);
+    }
+
+    // Get bug reports that are revisions
+    public function revisedBugReports()
+    {
+        return $this->bugReports()->where('is_revision', true);
+    }
+
+    // Add this new relationship
+    public function evidence()
+    {
+        return $this->hasMany(TestEvidence::class, 'task_id');
     }
 }

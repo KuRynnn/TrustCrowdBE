@@ -90,20 +90,142 @@ class ApplicationService
     {
         $application = $this->getApplicationById($id);
 
+        // Get total test cases
+        $totalTestCases = $application->testCases()->count();
+
+        // Count completed tasks (both 'Completed' and 'Verified' statuses)
+        $completedTasks = $application->uatTasks()
+            ->whereIn('status', ['Completed', 'Verified'])
+            ->count();
+
+        // Count tasks in progress
+        $inProgressTasks = $application->uatTasks()
+            ->where('status', 'In Progress')
+            ->count();
+
+        // Count tasks not started
+        $notStartedTasks = $application->uatTasks()
+            ->where('status', 'Assigned')
+            ->count();
+
+        // Count all bugs
+        $totalBugs = $application->uatTasks()
+            ->withCount('bugReports')
+            ->get()
+            ->sum('bug_reports_count');
+
+        // Count valid bugs
+        $validBugs = $application->uatTasks()
+            ->whereHas('bugReports.validation', function ($query) {
+                $query->where('validation_status', 'Valid');
+            })
+            ->count();
+
+        // Count invalid bugs
+        $invalidBugs = $application->uatTasks()
+            ->whereHas('bugReports.validation', function ($query) {
+                $query->where('validation_status', 'Invalid');
+            })
+            ->count();
+
+        // Calculate percentage
+        $percentage = 0;
+        if ($totalTestCases > 0) {
+            $percentage = round(($completedTasks / $totalTestCases) * 100, 2);
+        }
+
         return [
-            'total_test_cases' => $application->testCases()->count(),
-            'completed_tasks' => $application->uatTasks()
-                ->where('status', 'Completed')
-                ->count(),
-            'total_bugs' => $application->uatTasks()
-                ->withCount('bugReports')
-                ->get()
-                ->sum('bug_reports_count'),
-            'valid_bugs' => $application->uatTasks()
-                ->whereHas('bugReports.validation', function ($query) {
-                    $query->where('validation_status', 'Valid');
-                })
-                ->count()
+            'total_test_cases' => $totalTestCases,
+            'completed_tasks' => $completedTasks,
+            'completed_test_cases' => $completedTasks, // For backward compatibility
+            'in_progress_test_cases' => $inProgressTasks,
+            'not_started_test_cases' => $notStartedTasks,
+            'total_bugs' => $totalBugs,
+            'valid_bugs' => $validBugs,
+            'invalid_bugs' => $invalidBugs,
+            'percentage' => $percentage
+        ];
+    }
+
+    /**
+     * Get application progress for a specific worker
+     * 
+     * @param string $id Application ID
+     * @param string $workerId Worker ID
+     * @return array Progress data filtered by worker
+     */
+    public function getApplicationProgressForWorker($id, $workerId)
+    {
+        $application = $this->getApplicationById($id);
+
+        // Get total test cases assigned to this worker
+        $workerTasks = $application->uatTasks()
+            ->where('worker_id', $workerId)
+            ->get();
+
+        $totalAssignedTestCases = $workerTasks->count();
+
+        if ($totalAssignedTestCases === 0) {
+            // Worker has no tasks for this application
+            return [
+                'total_test_cases' => 0,
+                'completed_test_cases' => 0,
+                'in_progress_test_cases' => 0,
+                'not_started_test_cases' => 0,
+                'total_bugs' => 0,
+                'valid_bugs' => 0,
+                'invalid_bugs' => 0,
+                'percentage' => 0
+            ];
+        }
+
+        // Count completed tasks for this worker
+        $completedTasks = $workerTasks->filter(function ($task) {
+            return in_array($task->status, ['Completed', 'Verified']);
+        })->count();
+
+        // Count tasks in progress for this worker
+        $inProgressTasks = $workerTasks->filter(function ($task) {
+            return $task->status === 'In Progress';
+        })->count();
+
+        // Count tasks not started for this worker
+        $notStartedTasks = $workerTasks->filter(function ($task) {
+            return $task->status === 'Assigned';
+        })->count();
+
+        // Count bugs reported by this worker
+        $totalBugs = $workerTasks->sum(function ($task) {
+            return $task->bugReports->count();
+        });
+
+        // Count valid bugs reported by this worker
+        $validBugs = $workerTasks->sum(function ($task) {
+            return $task->bugReports->filter(function ($bug) {
+                return $bug->validation && $bug->validation->validation_status === 'Valid';
+            })->count();
+        });
+
+        // Count invalid bugs reported by this worker
+        $invalidBugs = $workerTasks->sum(function ($task) {
+            return $task->bugReports->filter(function ($bug) {
+                return $bug->validation && $bug->validation->validation_status === 'Invalid';
+            })->count();
+        });
+
+        // Calculate percentage of completion for this worker
+        $percentage = round(($completedTasks / $totalAssignedTestCases) * 100, 2);
+
+        return [
+            'total_test_cases' => $totalAssignedTestCases,
+            'completed_tasks' => $completedTasks,
+            'completed_test_cases' => $completedTasks,
+            'in_progress_test_cases' => $inProgressTasks,
+            'not_started_test_cases' => $notStartedTasks,
+            'total_bugs' => $totalBugs,
+            'valid_bugs' => $validBugs,
+            'invalid_bugs' => $invalidBugs,
+            'percentage' => $percentage
         ];
     }
 

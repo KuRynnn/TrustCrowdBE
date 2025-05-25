@@ -1,61 +1,10 @@
 <?php
+// Update app\Http\Resources\Api\ApplicationResource.php
 
-// app/Http/Resources/Api/ApplicationResource.php
 namespace App\Http\Resources\Api;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/**
- * @OA\Schema(
- *     schema="ApplicationResource",
- *     title="Application Resource",
- *     description="Application resource representation",
- *     @OA\Property(
- *         property="app_id",
- *         type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000",
- *         description="UUID of the application"
- *     ),
- *     @OA\Property(
- *         property="app_name",
- *         type="string",
- *         example="Test Application",
- *         description="Name of the application"
- *     ),
- *     @OA\Property(
- *         property="app_url",
- *         type="string",
- *         example="https://testapp.com",
- *         description="URL of the application"
- *     ),
- *     @OA\Property(
- *         property="platform",
- *         type="string",
- *         example="web",
- *         description="Platform of the application"
- *     ),
- *     @OA\Property(
- *         property="description",
- *         type="string",
- *         example="Application description",
- *         description="Description of the application"
- *     ),
- *     @OA\Property(
- *         property="status",
- *         type="string",
- *         example="pending",
- *         description="Status of the application"
- *     ),
- *     @OA\Property(
- *         property="created_at",
- *         type="string",
- *         format="datetime",
- *         example="2025-03-12 10:00:00",
- *         description="Creation timestamp"
- *     )
- * )
- */
 class ApplicationResource extends JsonResource
 {
     public function toArray($request)
@@ -68,8 +17,20 @@ class ApplicationResource extends JsonResource
             'platform' => $this->platform,
             'description' => $this->description,
             'status' => $this->status,
+            'max_testers' => (int) $this->max_testers,
             'created_at' => $this->created_at->toDateTimeString(),
         ];
+
+        // Add worker count if available (from withCount)
+        if (isset($this->unique_workers_count)) {
+            $data['current_workers'] = (int) $this->unique_workers_count;
+            $data['max_workers'] = 10; // Or get from config
+        }
+
+        // Add test case count if loaded
+        if ($this->relationLoaded('testCases')) {
+            $data['test_cases_count'] = $this->testCases->count();
+        }
 
         // Add client if loaded
         if ($this->relationLoaded('client')) {
@@ -85,9 +46,12 @@ class ApplicationResource extends JsonResource
                     'app_id' => $testCase->app_id,
                     'qa_id' => $testCase->qa_id,
                     'test_title' => $testCase->test_title,
-                    'test_steps' => $testCase->test_steps,
-                    'expected_result' => $testCase->expected_result,
+                    'given_context' => $testCase->given_context,
+                    'when_action' => $testCase->when_action,
+                    'then_result' => $testCase->then_result,
                     'priority' => $testCase->priority,
+                    'created_at' => $testCase->created_at->toDateTimeString(),
+                    'updated_at' => $testCase->updated_at->toDateTimeString(),
                 ];
 
                 // Add QA specialist if loaded

@@ -11,6 +11,8 @@ use App\Http\Controllers\Api\CrowdworkerController;
 use App\Http\Controllers\Api\QASpecialistController;
 use App\Http\Controllers\Api\TestCaseController;
 use App\Http\Controllers\Api\TaskValidationController;
+use App\Http\Controllers\Api\TestEvidenceController;
+use App\Http\Controllers\Api\UATProcessController;
 
 // Authentication Routes
 Route::prefix('auth')->group(function () {
@@ -23,8 +25,6 @@ Route::prefix('auth')->group(function () {
 Route::post('/clients', [ClientController::class, 'store']);
 Route::post('/crowdworkers', [CrowdworkerController::class, 'store']);
 Route::post('/qa-specialists', [QASpecialistController::class, 'store']);
-
-
 
 // Client Routes
 Route::prefix('clients')->group(function () {
@@ -88,6 +88,10 @@ Route::prefix('uat-tasks')->group(function () {
     Route::put('/{id}/complete', [UATTaskController::class, 'completeTask']);
     Route::get('/{id}/progress', [UATTaskController::class, 'getTaskProgress']);
     Route::get('/{id}/bug-reports', [UATTaskController::class, 'getBugReports']);
+
+    // New endpoints for revision functionality
+    Route::get('/{id}/revision-history', [UATTaskController::class, 'getRevisionHistory']);
+    Route::put('/{id}/start-revision', [UATTaskController::class, 'startRevision']);
 });
 
 // Test Case Routes
@@ -113,6 +117,10 @@ Route::prefix('bug-reports')->group(function () {
     Route::get('/{id}/validation', [BugReportController::class, 'getValidation']);
     Route::post('/{id}/screenshot', [BugReportController::class, 'uploadScreenshot']);
     Route::get('/statistics', [BugReportController::class, 'getStatistics']);
+
+    // New endpoints for bug report revisions
+    Route::post('/{id}/revise', [BugReportController::class, 'createRevision']);
+    Route::get('/{id}/history', [BugReportController::class, 'getBugHistory']);
 });
 
 // Bug Validation Routes
@@ -136,4 +144,18 @@ Route::prefix('task-validations')->group(function () {
     Route::post('/', [TaskValidationController::class, 'store']);
     Route::get('/{taskId}', [TaskValidationController::class, 'show']);
     Route::get('/check-readiness/{taskId}', [TaskValidationController::class, 'checkTaskReadiness']);
+
+    // New endpoint for task validation
+    Route::post('/validate', [TaskValidationController::class, 'validateTask']);
+    Route::get('/task/{taskId}', [TaskValidationController::class, 'getByTaskId']);
+});
+
+// Evidence routes
+Route::prefix('evidence')->group(function () {
+    Route::post('/bugs/{bugId}', [TestEvidenceController::class, 'uploadForBug']);
+    Route::post('/tasks/{taskId}', [TestEvidenceController::class, 'uploadForTask']);
+    Route::get('/bugs/{bugId}', [TestEvidenceController::class, 'getForBug']);
+    Route::get('/tasks/{taskId}', [TestEvidenceController::class, 'getForTask']);
+    Route::delete('/{evidenceId}', [TestEvidenceController::class, 'delete']);
+    Route::put('/{evidenceId}', [TestEvidenceController::class, 'update']);
 });

@@ -24,53 +24,6 @@ use Illuminate\Http\Request;
 class AuthController extends Controller
 {
     use ApiResponse;
-
-    /**
-     * @OA\Post(
-     *     path="/auth/register",
-     *     summary="Register a new user",
-     *     description="Creates a new user based on the provided user type",
-     *     operationId="registerUser",
-     *     tags={"Authentication"},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"name", "email", "password", "password_confirmation", "user_type"},
-     *             @OA\Property(property="name", type="string", example="John Doe"),
-     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
-     *             @OA\Property(property="password", type="string", format="password", example="password123"),
-     *             @OA\Property(property="password_confirmation", type="string", format="password", example="password123"),
-     *             @OA\Property(property="user_type", type="string", enum={"client", "crowdworker", "qa_specialist"}, example="client"),
-     *             @OA\Property(property="company", type="string", example="Acme Inc", description="Required for client user type"),
-     *             @OA\Property(property="skills", type="array", @OA\Items(type="string"), example={"testing", "automation"}, description="Required for crowdworker user type"),
-     *             @OA\Property(property="expertise", type="array", @OA\Items(type="string"), example={"web", "mobile"}, description="Required for qa_specialist user type")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="User registered successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="User registered successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="user", type="object"),
-     *                 @OA\Property(property="token", type="string", example="6|laravel_sanctum_token...")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error or invalid user type",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
-     *             @OA\Property(property="errors", type="object")
-     *         )
-     *     )
-     * )
-     */
     public function register(RegisterRequest $request)
     {
         $data = $request->validated();
@@ -115,56 +68,6 @@ class AuthController extends Controller
         ], 'User registered successfully', 201);
     }
 
-    /**
-     * @OA\Post(
-     *     path="/auth/login",
-     *     summary="Log in a user",
-     *     description="Authenticates a user and returns a token",
-     *     operationId="loginUser",
-     *     tags={"Authentication"},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"email", "password"},
-     *             @OA\Property(property="email", type="string", format="email", example="john@example.com"),
-     *             @OA\Property(property="password", type="string", format="password", example="password123")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Logged in successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Logged in successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="user", type="object"),
-     *                 @OA\Property(property="token", type="string", example="6|laravel_sanctum_token..."),
-     *                 @OA\Property(property="role", type="string", example="client", description="User role: client, crowdworker, or qa_specialist")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Invalid credentials",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="Invalid credentials"),
-     *             @OA\Property(property="data", type="null", example=null)
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=false),
-     *             @OA\Property(property="message", type="string", example="The given data was invalid."),
-     *             @OA\Property(property="errors", type="object")
-     *         )
-     *     )
-     * )
-     */
     public function login(LoginRequest $request)
     {
         $data = $request->validated();
@@ -218,32 +121,6 @@ class AuthController extends Controller
         ], 'Logged in successfully');
     }
 
-    /**
-     * @OA\Post(
-     *     path="/auth/logout",
-     *     summary="Log out a user",
-     *     description="Revokes the current access token",
-     *     operationId="logoutUser",
-     *     tags={"Authentication"},
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Response(
-     *         response=200,
-     *         description="Logged out successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="success", type="boolean", example=true),
-     *             @OA\Property(property="message", type="string", example="Logged out successfully"),
-     *             @OA\Property(property="data", type="null", example=null)
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=401,
-     *         description="Unauthenticated",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="message", type="string", example="Unauthenticated.")
-     *         )
-     *     )
-     * )
-     */
     public function logout(Request $request)
     {
         try {

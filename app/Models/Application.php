@@ -6,7 +6,7 @@ namespace App\Models;
 class Application extends BaseModel
 {
     protected $primaryKey = 'app_id';
-    protected $fillable = ['client_id', 'app_name', 'app_url', 'platform', 'description', 'status'];
+    protected $fillable = ['client_id', 'app_name', 'app_url', 'platform', 'description', 'status', 'max_testers'];
 
     public function client()
     {
@@ -21,5 +21,13 @@ class Application extends BaseModel
     public function uatTasks()
     {
         return $this->hasMany(UATTask::class, 'app_id');
+    }
+
+    /**
+     * Get unique crowdworkers count for this application
+     */
+    public function getUniqueCrowdworkersCountAttribute()
+    {
+        return $this->uatTasks()->distinct('worker_id')->count('worker_id');
     }
 }

@@ -78,17 +78,28 @@ class ApplicationRepository extends BaseRepository
         return $this->model->query();
     }
 
-    public function getAvailableForCrowdworker($crowdworkerId, $maxCrowdworkerPerApp = 10)
+    public function getAvailableForCrowdworker($crowdworkerId)
     {
         return $this->model
-            ->whereHas('testCases') // harus ada test case
+            ->whereHas('testCases') // Must have test cases
             ->whereDoesntHave('uatTasks', function ($query) use ($crowdworkerId) {
-                $query->where('worker_id', $crowdworkerId); // belum pernah ambil
+                $query->where('worker_id', $crowdworkerId); // Worker hasn't picked this app yet
             })
-            ->withCount('uatTasks') // hitung jumlah crowdworker yang sedang menguji
-            ->having('uat_tasks_count', '<', $maxCrowdworkerPerApp) // belum mencapai batas
-            ->with(['client', 'testCases.qaSpecialist']) // Added .qaSpecialist to info tambahan
+            ->withCount([
+                'uatTasks as unique_workers_count' => function ($query) {
+                    // Count UNIQUE workers, not total tasks
+                    $query->select(\DB::raw('COUNT(DISTINCT worker_id)'));
+                }
+            ])
+            ->whereRaw('(SELECT COUNT(DISTINCT worker_id) FROM uat_tasks WHERE app_id = applications.app_id) < applications.max_testers')
+            ->with(['client', 'testCases.qaSpecialist']) // Load relationships
+            ->where('status', 'Ready for Testing') // Only show apps ready for testing
             ->orderBy('created_at', 'desc')
-            ->get();
+            ->get()
+            ->map(function ($application) {
+                // Add max_testers to the response
+                $application->current_workers = $application->unique_workers_count ?? 0;
+                return $application;
+            });
     }
 }

@@ -4,97 +4,111 @@ namespace App\Http\Resources\Api;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/**
- * @OA\Schema(
- *     schema="UATTaskResource",
- *     @OA\Property(property="task_id", type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000"),
- *     @OA\Property(property="app_id", type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000"),
- *     @OA\Property(property="test_id", type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000"),
- *     @OA\Property(property="worker_id", type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000"),
- *     @OA\Property(property="status", type="string", enum={"Assigned", "In Progress", "Completed"}, example="In Progress"),
- *     @OA\Property(property="started_at", type="string", format="datetime", example="2025-03-12 10:00:00", nullable=true),
- *     @OA\Property(property="completed_at", type="string", format="datetime", example="2025-03-12 11:00:00", nullable=true),
- *     @OA\Property(property="created_at", type="string", format="datetime", example="2025-03-12 10:00:00"),
- *     @OA\Property(property="updated_at", type="string", format="datetime", example="2025-03-12 11:00:00"),
- *     @OA\Property(property="duration", type="integer", example=60, nullable=true),
- *     @OA\Property(property="bug_reports_count", type="integer", example=2, nullable=true),
- *     @OA\Property(
- *         property="application",
- *         type="object",
- *         @OA\Property(property="app_id", type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000"),
- *         @OA\Property(property="app_name", type="string", example="E-commerce Platform"),
- *         @OA\Property(property="app_url", type="string", example="https://example.com"),
- *         nullable=true
- *     ),
- *     @OA\Property(
- *         property="test_case",
- *         type="object",
- *         @OA\Property(property="test_id", type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000"),
- *         @OA\Property(property="test_title", type="string", example="User Login Test"),
- *         @OA\Property(property="test_steps", type="string", example="1. Navigate to login page\n2. Enter credentials"),
- *         nullable=true
- *     ),
- *     @OA\Property(
- *         property="crowdworker",
- *         type="object",
- *         @OA\Property(property="worker_id", type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000"),
- *         @OA\Property(property="name", type="string", example="John Doe"),
- *         @OA\Property(property="email", type="string", format="email", example="john@example.com"),
- *         nullable=true
- *     ),
- *     @OA\Property(
- *         property="bug_reports",
- *         type="array",
- *         @OA\Items(
- *             type="object",
- *             @OA\Property(property="bug_id", type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000"),
- *             @OA\Property(property="title", type="string", example="Login Button Not Responsive"),
- *             @OA\Property(property="severity", type="string", example="High")
- *         ),
- *         nullable=true
- *     )
- * )
- */
 class UATTaskResource extends JsonResource
 {
     public function toArray($request)
     {
-        return [
+        $data = [
             'task_id' => $this->task_id,
             'app_id' => $this->app_id,
             'test_id' => $this->test_id,
             'worker_id' => $this->worker_id,
             'status' => $this->status,
-            'started_at' => $this->started_at ? $this->started_at->toDateTimeString() : null,
-            'completed_at' => $this->completed_at ? $this->completed_at->toDateTimeString() : null,
             'created_at' => $this->created_at->toDateTimeString(),
             'updated_at' => $this->updated_at->toDateTimeString(),
-            'application' => new ApplicationResource($this->whenLoaded('application')),
-            'test_case' => new TestCaseResource($this->whenLoaded('testCase')),
-            'crowdworker' => new CrowdworkerResource($this->whenLoaded('crowdworker')),
-            'bug_reports' => BugReportResource::collection($this->whenLoaded('bugReports')),
-            'bug_reports_count' => $this->whenLoaded('bugReports', function () {
-                return $this->bugReports->count();
+
+            // Always include application data when loaded
+            'application' => $this->whenLoaded('application', function () {
+                return new ApplicationResource($this->application);
             }),
-            'duration' => $this->when($this->started_at && $this->completed_at, function () {
-                return $this->started_at->diffInMinutes($this->completed_at);
-            })
+
+            // Always include test case data when loaded
+            'test_case' => $this->whenLoaded('testCase', function () {
+                return new TestCaseResource($this->testCase);
+            }),
+
+            // Always include crowdworker data when loaded
+            'crowdworker' => $this->whenLoaded('crowdworker', function () {
+                return new CrowdworkerResource($this->crowdworker);
+            }),
         ];
+
+        // Add timing information conditionally
+        if ($this->started_at || $this->completed_at) {
+            $data['timing'] = [
+                'started_at' => $this->started_at ? $this->started_at->toDateTimeString() : null,
+                'completed_at' => $this->completed_at ? $this->completed_at->toDateTimeString() : null,
+                'duration' => $this->when($this->started_at, function () {
+                    return $this->started_at->diffInMinutes($this->completed_at ?? now());
+                }),
+            ];
+        }
+
+        // Add revision information only if there are revisions
+        if ($this->revision_count > 0) {
+            $data['revision'] = [
+                'count' => $this->revision_count,
+                'status' => $this->revision_status,
+                'comments' => $this->revision_comments,
+                'last_revised_at' => $this->last_revised_at ? $this->last_revised_at->toDateTimeString() : null,
+            ];
+        }
+
+        // Include additional relationships only when explicitly requested
+        if ($request->has('include')) {
+            $includes = explode(',', $request->input('include'));
+
+            if (in_array('task_validation', $includes)) {
+                $data['task_validation'] = new TaskValidationResource($this->whenLoaded('taskValidation'));
+            }
+
+            // Include bug reports conditionally
+            if (in_array('bug_reports', $includes)) {
+                $data['bug_reports_count'] = $this->whenLoaded('bugReports', function () {
+                    return $this->bugReports->count();
+                });
+
+                $data['bug_reports'] = $this->whenLoaded('bugReports', function () {
+                    return $this->bugReports->map(function ($bug) {
+                        $bug->loadMissing(['evidence', 'validation']);
+                        return new BugReportResource($bug);
+                    });
+                });
+            }
+
+            // Include evidence conditionally
+            if (in_array('evidence', $includes)) {
+                $data['evidence'] = $this->whenLoaded('evidence', function () {
+                    return TestEvidenceResource::collection($this->evidence);
+                });
+
+                $data['evidence_count'] = $this->whenLoaded('evidence', function () {
+                    return $this->evidence->count();
+                });
+            }
+        } else {
+            // Always include bug reports when loaded (even without explicit include)
+            if ($this->relationLoaded('bugReports')) {
+                $data['bug_reports_count'] = $this->bugReports->count();
+                $data['bug_reports'] = $this->bugReports->map(function ($bug) {
+                    // Make sure related models are loaded
+                    $bug->loadMissing(['evidence', 'validation']);
+                    return new BugReportResource($bug);
+                });
+            }
+
+            // Always include evidence when loaded
+            if ($this->relationLoaded('evidence')) {
+                $data['evidence'] = TestEvidenceResource::collection($this->evidence);
+                $data['evidence_count'] = $this->evidence->count();
+            }
+
+            // Always include task validation when loaded
+            if ($this->relationLoaded('taskValidation')) {
+                $data['task_validation'] = new TaskValidationResource($this->taskValidation);
+            }
+        }
+
+        return $data;
     }
 }

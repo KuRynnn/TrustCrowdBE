@@ -31,9 +31,8 @@ class BugReportRepository extends BaseRepository
 
     public function findByTask($taskId)
     {
-        return $this->model
-            ->with(['crowdworker', 'validation'])
-            ->where('task_id', $taskId)
+        return BugReport::where('task_id', $taskId)
+            ->with(['evidence', 'validation']) // Ensure evidence is loaded!
             ->orderBy('created_at', 'desc')
             ->get();
     }
@@ -85,5 +84,27 @@ class BugReportRepository extends BaseRepository
     public function getQuery()
     {
         return $this->model->query();
+    }
+
+    public function findAllRevisions($originalBugId)
+    {
+        return $this->model->where('original_bug_id', $originalBugId)
+            ->where('is_revision', true)
+            ->orderBy('revision_number')
+            ->get();
+    }
+
+    public function findOriginalBugs()
+    {
+        return $this->model->where('is_revision', false)
+            ->orderBy('created_at', 'desc')
+            ->get();
+    }
+
+    public function findRevisedBugs()
+    {
+        return $this->model->where('is_revision', true)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 }

@@ -25,6 +25,10 @@ return new class extends Migration {
                 ->on('crowdworkers')
                 ->onDelete('cascade');
             $table->string('status')->default('assigned');
+            $table->integer('revision_count')->default(0);
+            $table->string('revision_status')->default('None');
+            $table->text('revision_comments')->nullable();
+            $table->timestamp('last_revised_at')->nullable();
             $table->timestamp('started_at')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->timestamps();

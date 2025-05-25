@@ -17,6 +17,13 @@ return new class extends Migration {
             $table->text('steps_to_reproduce');
             $table->string('severity')->default('low');
             $table->string('screenshot_url')->nullable();
+            $table->uuid('original_bug_id')->nullable();
+            $table->foreign('original_bug_id')
+                ->references('bug_id')
+                ->on('bug_reports')
+                ->onDelete('set null');
+            $table->boolean('is_revision')->default(false);
+            $table->integer('revision_number')->default(0);
             $table->timestamps();
             $table->softDeletes();
         });

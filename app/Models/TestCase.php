@@ -1,6 +1,5 @@
 <?php
 
-// app/Models/TestCase.php
 namespace App\Models;
 
 class TestCase extends BaseModel
@@ -10,8 +9,9 @@ class TestCase extends BaseModel
         'app_id',
         'qa_id',
         'test_title',
-        'test_steps',
-        'expected_result',
+        'given_context',
+        'when_action',
+        'then_result',
         'priority'
     ];
 

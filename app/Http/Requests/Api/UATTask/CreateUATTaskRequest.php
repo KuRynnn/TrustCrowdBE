@@ -67,7 +67,18 @@ class CreateUATTaskRequest extends FormRequest
             'app_id' => 'required|exists:applications,app_id|uuid',
             'test_id' => 'required|exists:test_cases,test_id|uuid',
             'worker_id' => 'required|exists:crowdworkers,worker_id|uuid',
-            'status' => 'required|in:Assigned,In Progress,Completed',
+            'status' => [
+                'required',
+                function ($attribute, $value, $fail) {
+                    $allowedStatuses = ['Assigned', 'In Progress', 'Completed', 'Revision Required', 'Verified', 'Rejected'];
+                    if (
+                        !in_array($value, $allowedStatuses) &&
+                        !in_array(ucwords(strtolower($value)), $allowedStatuses)
+                    ) {
+                        $fail('The ' . $attribute . ' must be one of: ' . implode(', ', $allowedStatuses));
+                    }
+                },
+            ],
             'started_at' => 'nullable|date',
             'completed_at' => 'nullable|date|after:started_at'
         ];

@@ -4,51 +4,6 @@ namespace App\Http\Requests\Api\TestCase;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-/**
- * @OA\Schema(
- *     schema="UpdateTestCaseRequest",
- *     @OA\Property(
- *         property="app_id",
- *         type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000",
- *         description="ID of the application"
- *     ),
- *     @OA\Property(
- *         property="qa_id",
- *         type="string",
- *         format="uuid",
- *         example="550e8400-e29b-41d4-a716-446655440000",
- *         description="ID of the QA specialist"
- *     ),
- *     @OA\Property(
- *         property="test_title",
- *         type="string",
- *         example="Updated User Login Functionality",
- *         description="Updated title of the test case",
- *         maxLength=255
- *     ),
- *     @OA\Property(
- *         property="test_steps",
- *         type="string",
- *         example="1. Navigate to login page\n2. Enter valid credentials\n3. Click login button\n4. Verify dashboard elements",
- *         description="Updated steps to execute the test"
- *     ),
- *     @OA\Property(
- *         property="expected_result",
- *         type="string",
- *         example="User should be successfully logged in and redirected to dashboard with all elements visible",
- *         description="Updated expected outcome of the test"
- *     ),
- *     @OA\Property(
- *         property="priority",
- *         type="string",
- *         enum={"Low", "Medium", "High"},
- *         example="High",
- *         description="Updated priority level of the test case"
- *     )
- * )
- */
 class UpdateTestCaseRequest extends FormRequest
 {
     public function authorize()
@@ -62,8 +17,9 @@ class UpdateTestCaseRequest extends FormRequest
             'app_id' => 'sometimes|required|exists:applications,app_id|uuid',
             'qa_id' => 'sometimes|required|exists:qa_specialists,qa_id|uuid',
             'test_title' => 'sometimes|required|string|max:255',
-            'test_steps' => 'sometimes|required|string',
-            'expected_result' => 'sometimes|required|string',
+            'given_context' => 'sometimes|required|string',
+            'when_action' => 'sometimes|required|string',
+            'then_result' => 'sometimes|required|string',
             'priority' => 'sometimes|required|in:Low,Medium,High'
         ];
     }
@@ -75,9 +31,23 @@ class UpdateTestCaseRequest extends FormRequest
             'qa_id.exists' => 'Selected QA Specialist does not exist',
             'test_title.required' => 'Test title is required',
             'test_title.max' => 'Test title cannot exceed 255 characters',
-            'test_steps.required' => 'Test steps are required',
-            'expected_result.required' => 'Expected result is required',
-            'priority.in' => 'Priority must be Low, Medium, or High'
+            'given_context.required' => 'Given context is required',
+            'when_action.required' => 'When action is required',
+            'then_result.required' => 'Then result is required',
+            'priority.in' => 'Priority must be low, medium, or high'
+        ];
+    }
+
+    public function attributes()
+    {
+        return [
+            'app_id' => 'application',
+            'qa_id' => 'QA specialist',
+            'test_title' => 'test title',
+            'given_context' => 'given context',
+            'when_action' => 'when action',
+            'then_result' => 'then result',
+            'priority' => 'priority level'
         ];
     }
 }

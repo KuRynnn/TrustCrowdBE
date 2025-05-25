@@ -1,6 +1,5 @@
 <?php
 
-// app/Services/TestCase/TestCaseService.php
 namespace App\Services\TestCase;
 
 use App\Repositories\TestCase\TestCaseRepository;
@@ -39,6 +38,14 @@ class TestCaseService
 
     public function createTestCase(array $data)
     {
+        // Validate required fields
+        $requiredFields = ['app_id', 'qa_id', 'test_title', 'given_context', 'when_action', 'then_result', 'priority'];
+        foreach ($requiredFields as $field) {
+            if (!isset($data[$field]) || empty($data[$field])) {
+                throw new \InvalidArgumentException("Missing required field: {$field}");
+            }
+        }
+
         $testCase = $this->testCaseRepository->create($data);
         event(new TestCaseCreated($testCase));
 
@@ -115,4 +122,28 @@ class TestCaseService
         return $this->testCaseRepository->deleteById($id);
     }
 
+    public function getTestCaseStatistics($id)
+    {
+        $testCase = $this->getTestCaseById($id);
+
+        $uatTasks = $testCase->uatTasks;
+
+        $total = $uatTasks->count();
+        $completed = $uatTasks->where('status', 'Completed')->count();
+        $inProgress = $uatTasks->where('status', 'In Progress')->count();
+        $notStarted = $uatTasks->where('status', 'Assigned')->count();
+        $bugReports = 0;
+
+        foreach ($uatTasks as $task) {
+            $bugReports += $task->bugReports->count();
+        }
+
+        return [
+            'total_tasks' => $total,
+            'completed_tasks' => $completed,
+            'in_progress_tasks' => $inProgress,
+            'not_started_tasks' => $notStarted,
+            'bug_reports' => $bugReports
+        ];
+    }
 }

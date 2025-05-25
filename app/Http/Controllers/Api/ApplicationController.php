@@ -14,12 +14,6 @@ use App\Http\Requests\Api\Application\CreateApplicationRequest;
 use App\Http\Requests\Api\Application\UpdateApplicationRequest;
 use App\Traits\ApiResponse;
 
-/**
- * @OA\Tag(
- *     name="Applications",
- *     description="API Endpoints for Application management"
- * )
- */
 class ApplicationController extends Controller
 {
     use ApiResponse;
@@ -38,87 +32,25 @@ class ApplicationController extends Controller
         $this->testCaseService = $testCaseService;
     }
 
-    /**
-     * @OA\Get(
-     *     path="/applications",
-     *     tags={"Applications"},
-     *     summary="Get list of applications",
-     *     @OA\Response(
-     *         response=200,
-     *         description="Successful operation",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Applications retrieved successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="array",
-     *                 @OA\Items(
-     *                     type="object",
-     *                     @OA\Property(property="app_id", type="string", format="uuid"),
-     *                     @OA\Property(property="app_name", type="string", example="Test App"),
-     *                     @OA\Property(property="app_url", type="string", example="https://test.com"),
-     *                     @OA\Property(property="platform", type="string", example="web"),
-     *                     @OA\Property(property="description", type="string", example="Description"),
-     *                     @OA\Property(property="status", type="string", example="pending"),
-     *                     @OA\Property(property="created_at", type="string", format="datetime")
-     *                 )
-     *             )
-     *         )
-     *     )
-     * )
-     */
     public function index()
     {
         $applications = $this->applicationService->getAllApplications();
+
+        // Add current workers count to each application
+        $applications->each(function ($application) {
+            $currentWorkers = $application->uatTasks()
+                ->distinct('worker_id')
+                ->count('worker_id');
+
+            $application->current_workers = $currentWorkers;
+        });
+
         return $this->successResponse(
             ApplicationResource::collection($applications),
             'Applications retrieved successfully'
         );
     }
 
-    /**
-     * @OA\Post(
-     *     path="/applications",
-     *     tags={"Applications"},
-     *     summary="Create new application",
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"client_id", "app_name", "app_url", "platform", "description", "status"},
-     *             @OA\Property(property="client_id", type="string", format="uuid"),
-     *             @OA\Property(property="app_name", type="string", example="Test App"),
-     *             @OA\Property(property="app_url", type="string", example="https://test.com"),
-     *             @OA\Property(property="platform", type="string", example="web"),
-     *             @OA\Property(property="description", type="string", example="Description"),
-     *             @OA\Property(property="status", type="string", enum={"pending", "active", "completed"})
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Application created successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Application created successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="app_id", type="string", format="uuid"),
-     *                 @OA\Property(property="app_name", type="string", example="Test App"),
-     *                 @OA\Property(property="app_url", type="string", example="https://test.com"),
-     *                 @OA\Property(property="platform", type="string", example="web"),
-     *                 @OA\Property(property="description", type="string", example="Description"),
-     *                 @OA\Property(property="status", type="string", example="pending"),
-     *                 @OA\Property(property="created_at", type="string", format="datetime")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
     public function store(CreateApplicationRequest $request)
     {
         try {
@@ -146,105 +78,23 @@ class ApplicationController extends Controller
         }
     }
 
-    /**
-     * @OA\Get(
-     *     path="/applications/{id}",
-     *     tags={"Applications"},
-     *     summary="Get specific application",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Successful operation",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Application retrieved successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="app_id", type="string", format="uuid"),
-     *                 @OA\Property(property="app_name", type="string", example="Test App"),
-     *                 @OA\Property(property="app_url", type="string", example="https://test.com"),
-     *                 @OA\Property(property="platform", type="string", example="web"),
-     *                 @OA\Property(property="description", type="string", example="Description"),
-     *                 @OA\Property(property="status", type="string", example="pending"),
-     *                 @OA\Property(property="created_at", type="string", format="datetime")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Application not found",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
     public function show($id)
     {
         $application = $this->applicationService->getApplicationById($id);
+
+        // Add current workers count
+        $currentWorkers = $application->uatTasks()
+            ->distinct('worker_id')
+            ->count('worker_id');
+
+        $application->current_workers = $currentWorkers;
+
         return $this->successResponse(
             new ApplicationResource($application),
             'Application retrieved successfully'
         );
     }
 
-    /**
-     * @OA\Put(
-     *     path="/applications/{id}",
-     *     tags={"Applications"},
-     *     summary="Update application",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             @OA\Property(property="client_id", type="string", format="uuid"),
-     *             @OA\Property(property="app_name", type="string", example="Updated App"),
-     *             @OA\Property(property="app_url", type="string", example="https://updated.com"),
-     *             @OA\Property(property="platform", type="string", example="android"),
-     *             @OA\Property(property="description", type="string", example="Updated description"),
-     *             @OA\Property(property="status", type="string", enum={"pending", "active", "completed"})
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Application updated successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Application updated successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="app_id", type="string", format="uuid"),
-     *                 @OA\Property(property="app_name", type="string", example="Updated App"),
-     *                 @OA\Property(property="app_url", type="string", example="https://updated.com"),
-     *                 @OA\Property(property="platform", type="string", example="android"),
-     *                 @OA\Property(property="description", type="string", example="Updated description"),
-     *                 @OA\Property(property="status", type="string", example="active"),
-     *                 @OA\Property(property="created_at", type="string", format="datetime")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Application not found",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
     public function update(UpdateApplicationRequest $request, $id)
     {
         $application = $this->applicationService->updateApplicationById($id, $request->validated());
@@ -254,33 +104,6 @@ class ApplicationController extends Controller
         );
     }
 
-    /**
-     * @OA\Delete(
-     *     path="/applications/{id}",
-     *     tags={"Applications"},
-     *     summary="Delete application",
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         @OA\Schema(type="integer")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Application deleted successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Application deleted successfully"),
-     *             @OA\Property(property="data", type="null")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Application not found",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
     public function destroy($id)
     {
         $this->applicationService->deleteApplicationById($id);
@@ -294,17 +117,20 @@ class ApplicationController extends Controller
     {
         // Get crowdworker ID from request
         $crowdworkerId = $request->input('worker_id');
+
         if (!$crowdworkerId) {
             return $this->errorResponse('Worker ID is required', 422);
         }
 
-        // Limit aktif task (e.g. 2)
-        $activeTasks = UATTask::where('worker_id', $crowdworkerId)
+        // Count active APPLICATIONS (not tasks) - using distinct app_id
+        $activeApplications = UATTask::where('worker_id', $crowdworkerId)
             ->whereIn('status', ['Assigned', 'In Progress'])
-            ->count();
+            ->distinct('app_id')
+            ->count('app_id');
 
-        if ($activeTasks >= 2) {
-            return $this->successResponse([], 'You have reached the maximum active UAT tasks (2)');
+        // Check if worker has reached the maximum active applications (2)
+        if ($activeApplications >= 2) {
+            return $this->successResponse([], 'You have reached the maximum active applications (2). Please complete your current applications before picking new ones.');
         }
 
         $applications = $this->applicationService->getAvailableApplicationsForCrowdworker($crowdworkerId);
@@ -315,70 +141,33 @@ class ApplicationController extends Controller
         );
     }
 
-    /**
-     * @OA\Post(
-     *     path="/applications/{id}/pick",
-     *     tags={"Applications"},
-     *     summary="Crowdworker picks an application for testing",
-     *     description="Assigns all test cases of the application to the crowdworker as UAT Tasks",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="Application ID",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Application picked successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Application picked successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="application", ref="#/components/schemas/Application"),
-     *                 @OA\Property(
-     *                     property="uat_tasks",
-     *                     type="array",
-     *                     @OA\Items(ref="#/components/schemas/UATTask")
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Forbidden - User is not a crowdworker or has reached maximum active tasks",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Application not found",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Application is not ready for testing or has no test cases",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
     public function pickApplication($id, Request $request)
     {
         // Get crowdworker ID from request
         $crowdworkerId = $request->input('worker_id');
+
         if (!$crowdworkerId) {
             return $this->errorResponse('Worker ID is required', 422);
         }
 
-        // Check if crowdworker has reached maximum active tasks
-        $activeTasks = UATTask::where('worker_id', $crowdworkerId)
+        // Count active APPLICATIONS (not tasks) - using distinct app_id
+        $activeApplications = UATTask::where('worker_id', $crowdworkerId)
             ->whereIn('status', ['Assigned', 'In Progress'])
-            ->count();
+            ->distinct('app_id')
+            ->count('app_id');
 
-        if ($activeTasks >= 2) {
-            return $this->errorResponse('You have reached the maximum active UAT tasks (2)', 422);
+        // Check if worker has reached maximum active applications
+        if ($activeApplications >= 2) {
+            return $this->errorResponse('You have reached the maximum active applications (2). Please complete your current applications before picking new ones.', 422);
+        }
+
+        // Check if worker already has tasks for this specific application
+        $existingTasksForApp = UATTask::where('worker_id', $crowdworkerId)
+            ->where('app_id', $id)
+            ->exists();
+
+        if ($existingTasksForApp) {
+            return $this->errorResponse('You already have tasks for this application.', 422);
         }
 
         // Get the application
@@ -419,90 +208,12 @@ class ApplicationController extends Controller
         ], 'Application picked successfully. ' . count($uatTasks) . ' UAT tasks created.');
     }
 
-    /**
-     * @OA\Get(
-     *     path="/applications/{id}/final-report",
-     *     tags={"Applications"},
-     *     summary="Get final report for client",
-     *     description="Generates a comprehensive final report for the client with validated results",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="id",
-     *         in="path",
-     *         required=true,
-     *         description="Application ID",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Final report generated successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Final report generated successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="application", ref="#/components/schemas/Application"),
-     *                 @OA\Property(property="total_tasks", type="integer", example=10),
-     *                 @OA\Property(property="completed_tasks", type="integer", example=8),
-     *                 @OA\Property(property="total_bugs", type="integer", example=5),
-     *                 @OA\Property(property="valid_bugs", type="integer", example=3),
-     *                 @OA\Property(
-     *                     property="bugs_by_severity",
-     *                     type="object",
-     *                     @OA\Property(property="Critical", type="integer", example=1),
-     *                     @OA\Property(property="High", type="integer", example=1),
-     *                     @OA\Property(property="Medium", type="integer", example=1),
-     *                     @OA\Property(property="Low", type="integer", example=0)
-     *                 ),
-     *                 @OA\Property(
-     *                     property="validated_bugs",
-     *                     type="array",
-     *                     @OA\Items(
-     *                         type="object",
-     *                         @OA\Property(property="bug_id", type="string", format="uuid"),
-     *                         @OA\Property(property="bug_description", type="string", example="Login button not working"),
-     *                         @OA\Property(property="severity", type="string", example="High"),
-     *                         @OA\Property(property="validation_status", type="string", example="Valid"),
-     *                         @OA\Property(property="validator_notes", type="string", example="Confirmed issue, needs immediate fix")
-     *                     )
-     *                 ),
-     *                 @OA\Property(property="qa_notes", type="string", example="Overall good quality, but some critical issues need to be addressed"),
-     *                 @OA\Property(property="test_completion_percentage", type="number", format="float", example=80),
-     *                 @OA\Property(property="generated_at", type="string", format="datetime", example="2025-04-10 20:00:00")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=403,
-     *         description="Forbidden - User is not the client who owns this application",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Application not found",
-     *         @OA\JsonContent(ref="#/components/schemas/ErrorResponse")
-     *     )
-     * )
-     */
     public function getFinalReport($id, Request $request)
     {
-        // Get client ID from request
-        $clientId = $request->input('client_id');
-
-        // Get the application
         try {
             $application = $this->applicationService->getApplicationById($id);
 
-            // Check if user is the client who owns this application
-            if ($clientId && $application->client_id !== $clientId) {
-                return $this->errorResponse('Forbidden - You do not own this application', 403);
-            }
-
-            // Get application progress data
-            $progress = $this->applicationService->getApplicationProgress($id);
-
-            // Get all validated bug reports
+            // Get all validated bugs
             $validatedBugs = [];
             $bugsBySeverity = [
                 'Critical' => 0,
@@ -514,18 +225,15 @@ class ApplicationController extends Controller
             // Get all UAT tasks for this application
             $uatTasks = $application->uatTasks;
 
-            // Collect all bug reports from these tasks
+            // Collect all bug reports
             foreach ($uatTasks as $task) {
                 foreach ($task->bugReports as $bugReport) {
-                    // Only include validated bugs
                     if ($bugReport->validation && $bugReport->validation->validation_status === 'Valid') {
                         $validatedBugs[] = [
                             'bug_id' => $bugReport->bug_id,
                             'bug_description' => $bugReport->bug_description,
                             'severity' => $bugReport->severity,
                             'steps_to_reproduce' => $bugReport->steps_to_reproduce,
-                            'validation_status' => $bugReport->validation->validation_status,
-                            'validator_notes' => $bugReport->validation->comments
                         ];
 
                         // Count bugs by severity
@@ -536,32 +244,26 @@ class ApplicationController extends Controller
                 }
             }
 
-            // Calculate test completion percentage
-            $testCompletionPercentage = 0;
-            if ($progress['total_test_cases'] > 0) {
-                $testCompletionPercentage = ($progress['completed_tasks'] / $progress['total_test_cases']) * 100;
-            }
+            // Determine acceptance status based on the paper's 5 categories
+            $acceptanceStatus = $this->determineAcceptanceStatus($bugsBySeverity);
 
-            // Compile QA notes from task validations
-            $qaNotesArray = [];
-            foreach ($uatTasks as $task) {
-                if ($task->taskValidation && !empty($task->taskValidation->comments)) {
-                    $qaNotesArray[] = $task->taskValidation->comments;
-                }
-            }
-            $qaNotes = !empty($qaNotesArray) ? implode("\n", $qaNotesArray) : "No specific notes from QA.";
+            // Get progress data
+            $progress = $this->applicationService->getApplicationProgress($id);
 
             // Prepare the final report
             $finalReport = [
                 'application' => new ApplicationResource($application),
-                'total_tasks' => $progress['total_test_cases'],
-                'completed_tasks' => $progress['completed_tasks'],
-                'total_bugs' => $progress['total_bugs'],
-                'valid_bugs' => $progress['valid_bugs'],
-                'bugs_by_severity' => $bugsBySeverity,
-                'validated_bugs' => $validatedBugs,
-                'qa_notes' => $qaNotes,
-                'test_completion_percentage' => round($testCompletionPercentage, 2),
+                'test_coverage' => [
+                    'total_test_cases' => $progress['total_test_cases'],
+                    'completed_tasks' => $progress['completed_tasks'],
+                    'completion_percentage' => $progress['percentage']
+                ],
+                'bug_summary' => [
+                    'total_bugs' => count($validatedBugs),
+                    'by_severity' => $bugsBySeverity,
+                    'detailed_bugs' => $validatedBugs
+                ],
+                'acceptance_status' => $acceptanceStatus,
                 'generated_at' => now()->format('Y-m-d H:i:s')
             ];
 
@@ -569,10 +271,53 @@ class ApplicationController extends Controller
                 $finalReport,
                 'Final report generated successfully'
             );
-
         } catch (\Exception $e) {
-            return $this->errorResponse('Application not found or error generating report: ' . $e->getMessage(), 404);
+            return $this->errorResponse('Error generating report: ' . $e->getMessage(), 500);
         }
+    }
+
+    /**
+     * Helper method to determine acceptance status based on the paper's criteria
+     */
+    private function determineAcceptanceStatus($bugsBySeverity)
+    {
+        if ($bugsBySeverity['Critical'] > 0) {
+            return [
+                'status' => 'Rejected',
+                'description' => 'System is rejected due to critical issues that make it unusable.',
+                'recommendation' => 'Major rework is required before retesting.'
+            ];
+        }
+
+        if ($bugsBySeverity['High'] > 0) {
+            return [
+                'status' => 'Rework',
+                'description' => 'System needs to be fixed and retested before acceptance.',
+                'recommendation' => 'Fix all high-severity issues and submit for retesting.'
+            ];
+        }
+
+        if ($bugsBySeverity['Medium'] > 0) {
+            return [
+                'status' => 'Conditional Acceptance',
+                'description' => 'System is accepted conditionally, pending fixes to medium-severity issues.',
+                'recommendation' => 'Deploy with commitment to fix medium-severity issues within agreed timeframe.'
+            ];
+        }
+
+        if ($bugsBySeverity['Low'] > 0) {
+            return [
+                'status' => 'Provisional Acceptance',
+                'description' => 'System is accepted with minor cosmetic issues that don\'t affect functionality.',
+                'recommendation' => 'Address low-severity issues in future updates.'
+            ];
+        }
+
+        return [
+            'status' => 'Accept',
+            'description' => 'System is accepted without any changes required.',
+            'recommendation' => 'Ready for production deployment.'
+        ];
     }
 
     /**
@@ -585,6 +330,16 @@ class ApplicationController extends Controller
     {
         try {
             $applications = $this->applicationService->getApplicationsByClient($clientId);
+
+            // Add current workers count to each application
+            $applications->each(function ($application) {
+                $currentWorkers = $application->uatTasks()
+                    ->distinct('worker_id')
+                    ->count('worker_id');
+
+                $application->current_workers = $currentWorkers;
+            });
+
             return $this->successResponse(
                 ApplicationResource::collection($applications),
                 'Applications retrieved successfully'
@@ -607,60 +362,115 @@ class ApplicationController extends Controller
         try {
             $application = $this->applicationService->getApplicationById($id);
 
-            // Get all UAT tasks for this application
-            $uatTasks = $application->uatTasks;
+            // Get all test cases for this application
+            $testCases = $application->testCases;
 
-            // Initialize statistics
-            $statistics = [
-                'total_tasks' => $uatTasks->count(),
-                'completed_tasks' => $uatTasks->where('status', 'Completed')->count(),
-                'in_progress_tasks' => $uatTasks->whereIn('status', ['Assigned', 'In Progress'])->count(),
-                'pending_validation' => $uatTasks->where('status', 'Pending Validation')->count(),
-                'total_bugs' => 0,
-                'bugs_by_severity' => [
-                    'Critical' => 0,
-                    'High' => 0,
-                    'Medium' => 0,
-                    'Low' => 0
-                ],
-                'bugs_by_status' => [
-                    'Valid' => 0,
-                    'Invalid' => 0,
-                    'Pending' => 0
-                ]
-            ];
+            $testCaseStats = [];
+            $totalBugs = 0;
+            $totalCriticalBugs = 0;
+            $totalValidBugs = 0;
+            $totalInvalidBugs = 0;
+            $totalPendingValidation = 0;
 
-            // Count bugs and categorize them
-            foreach ($uatTasks as $task) {
-                $bugReports = $task->bugReports;
-                $statistics['total_bugs'] += $bugReports->count();
+            foreach ($testCases as $testCase) {
+                // Get UAT tasks for this test case
+                $uatTasks = $testCase->uatTasks;
 
-                foreach ($bugReports as $bug) {
-                    // Count by severity
-                    if (isset($statistics['bugs_by_severity'][$bug->severity])) {
-                        $statistics['bugs_by_severity'][$bug->severity]++;
-                    }
+                // Count tasks by status
+                $tasksByStatus = [
+                    'total' => $uatTasks->count(),
+                    'assigned' => $uatTasks->where('status', 'Assigned')->count(),
+                    'in_progress' => $uatTasks->where('status', 'In Progress')->count(),
+                    'completed' => $uatTasks->where('status', 'Completed')->count(),
+                    'revision_required' => $uatTasks->where('status', 'Revision Required')->count(),
+                    'verified' => $uatTasks->where('status', 'Verified')->count(),
+                    'rejected' => $uatTasks->where('status', 'Rejected')->count(),
+                ];
 
-                    // Count by validation status
-                    if ($bug->validation) {
-                        $validationStatus = $bug->validation->validation_status;
-                        if ($validationStatus === 'Valid') {
-                            $statistics['bugs_by_status']['Valid']++;
-                        } elseif ($validationStatus === 'Invalid') {
-                            $statistics['bugs_by_status']['Invalid']++;
-                        } else {
-                            $statistics['bugs_by_status']['Pending']++;
+                // Initialize bug counters
+                $bugCount = 0;
+                $criticalBugs = 0;
+                $highBugs = 0;
+                $mediumBugs = 0;
+                $lowBugs = 0;
+                $validBugs = 0;
+                $invalidBugs = 0;
+                $pendingValidation = 0;
+
+                // Count bugs for this test case
+                foreach ($uatTasks as $task) {
+                    foreach ($task->bugReports as $bug) {
+                        $bugCount++;
+
+                        // Count by severity
+                        switch (strtolower($bug->severity)) {
+                            case 'critical':
+                                $criticalBugs++;
+                                break;
+                            case 'high':
+                                $highBugs++;
+                                break;
+                            case 'medium':
+                                $mediumBugs++;
+                                break;
+                            case 'low':
+                                $lowBugs++;
+                                break;
                         }
-                    } else {
-                        $statistics['bugs_by_status']['Pending']++;
+
+                        // Count by validation status
+                        if ($bug->validation) {
+                            if (strtolower($bug->validation->validation_status) === 'valid') {
+                                $validBugs++;
+                            } else if (strtolower($bug->validation->validation_status) === 'invalid') {
+                                $invalidBugs++;
+                            } else {
+                                $pendingValidation++;
+                            }
+                        } else {
+                            $pendingValidation++;
+                        }
                     }
                 }
+
+                // Add to totals
+                $totalBugs += $bugCount;
+                $totalCriticalBugs += $criticalBugs;
+                $totalValidBugs += $validBugs;
+                $totalInvalidBugs += $invalidBugs;
+                $totalPendingValidation += $pendingValidation;
+
+                // Unique crowdworkers for this test case
+                $uniqueCrowdworkers = $uatTasks->pluck('worker_id')->unique()->count();
+
+                $testCaseStats[] = [
+                    'test_id' => $testCase->test_id,
+                    'test_title' => $testCase->test_title,
+                    'priority' => $testCase->priority,
+                    'crowdworkers_count' => $uniqueCrowdworkers,
+                    'tasks_by_status' => $tasksByStatus,
+                    'total_bugs' => $bugCount,
+                    'critical_bugs' => $criticalBugs,
+                    'high_bugs' => $highBugs,
+                    'medium_bugs' => $mediumBugs,
+                    'low_bugs' => $lowBugs,
+                    'valid_bugs' => $validBugs,
+                    'invalid_bugs' => $invalidBugs,
+                    'pending_validation' => $pendingValidation
+                ];
             }
 
-            return $this->successResponse(
-                $statistics,
-                'Application statistics retrieved successfully'
-            );
+            return $this->successResponse([
+                'test_case_statistics' => $testCaseStats,
+                'summary' => [
+                    'total_bugs' => $totalBugs,
+                    'critical_bugs' => $totalCriticalBugs,
+                    'valid_bugs' => $totalValidBugs,
+                    'invalid_bugs' => $totalInvalidBugs,
+                    'pending_validation' => $totalPendingValidation,
+                    'total_test_cases' => count($testCases),
+                ]
+            ], 'Application statistics retrieved successfully');
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error retrieving application statistics: ' . $e->getMessage());
             return $this->errorResponse('Failed to retrieve application statistics: ' . $e->getMessage(), 500);
@@ -676,48 +486,46 @@ class ApplicationController extends Controller
     public function getProgress($id)
     {
         try {
-            // Use the existing getApplicationProgress method from your service
-            $applicationProgress = $this->applicationService->getApplicationProgress($id);
             $application = $this->applicationService->getApplicationById($id);
 
-            // Calculate progress percentage
-            $progressPercentage = 0;
-            if ($applicationProgress['total_test_cases'] > 0) {
-                $progressPercentage = ($applicationProgress['completed_tasks'] / $applicationProgress['total_test_cases']) * 100;
-            }
+            // Get all UAT tasks for this application
+            $uatTasks = $application->uatTasks;
 
-            // Prepare timeline data
-            $timeline = [
-                'created_at' => $application->created_at->format('Y-m-d H:i:s'),
-                'updated_at' => $application->updated_at->format('Y-m-d H:i:s')
+            // Count tasks by status
+            $tasksByStatus = [
+                'total' => $uatTasks->count(),
+                'assigned' => $uatTasks->where('status', 'Assigned')->count(),
+                'in_progress' => $uatTasks->where('status', 'In Progress')->count(),
+                'completed' => $uatTasks->where('status', 'Completed')->count(),
+                'revision_required' => $uatTasks->where('status', 'Revision Required')->count(),
+                'verified' => $uatTasks->where('status', 'Verified')->count(),
+                'rejected' => $uatTasks->where('status', 'Rejected')->count(),
             ];
 
-            // Add estimated completion if available
-            // This is a placeholder - you may want to implement a more sophisticated calculation
-            if ($progressPercentage > 0 && $progressPercentage < 100) {
-                $elapsedDays = $application->created_at->diffInDays(now());
-                if ($elapsedDays > 0 && $progressPercentage > 0) {
-                    $totalEstimatedDays = ($elapsedDays / $progressPercentage) * 100;
-                    $remainingDays = $totalEstimatedDays - $elapsedDays;
-                    $estimatedCompletion = now()->addDays(ceil($remainingDays))->format('Y-m-d');
-                    $timeline['estimated_completion'] = $estimatedCompletion;
-                }
-            } elseif ($progressPercentage >= 100) {
-                $timeline['estimated_completion'] = 'Completed';
-            } else {
-                $timeline['estimated_completion'] = 'Not started';
-            }
+            // Calculate percentage of completed tasks (verified + rejected)
+            $completedTasks = $tasksByStatus['verified'] + $tasksByStatus['rejected'];
+            $totalTasks = $tasksByStatus['total'];
+            $percentage = $totalTasks > 0 ? round(($completedTasks / $totalTasks) * 100, 2) : 0;
 
-            // Build complete progress data
-            $progress = array_merge($applicationProgress, [
-                'progress_percentage' => round($progressPercentage, 2),
-                'timeline' => $timeline
-            ]);
+            // Count unique crowdworkers
+            $uniqueCrowdworkers = $uatTasks->pluck('worker_id')->unique()->count();
 
-            return $this->successResponse(
-                $progress,
-                'Application progress retrieved successfully'
-            );
+            // Count test cases
+            $testCasesCount = $application->testCases->count();
+
+            // Calculate total possible tasks (crowdworkers × test cases)
+            $totalPossibleTasks = $testCasesCount * $uniqueCrowdworkers;
+
+            return $this->successResponse([
+                'tasks_by_status' => $tasksByStatus,
+                'total_crowdworkers' => $uniqueCrowdworkers,
+                'total_test_cases' => $testCasesCount,
+                'total_possible_tasks' => $totalPossibleTasks,
+                'percentage' => $percentage,
+                'completed_test_cases' => $completedTasks, // For backward compatibility
+                'in_progress_test_cases' => $tasksByStatus['in_progress'], // For backward compatibility
+                'not_started_test_cases' => $tasksByStatus['assigned'], // For backward compatibility
+            ], 'Application progress retrieved successfully');
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('Error retrieving application progress: ' . $e->getMessage());
             return $this->errorResponse('Failed to retrieve application progress: ' . $e->getMessage(), 500);
@@ -750,4 +558,45 @@ class ApplicationController extends Controller
             return $this->errorResponse('Failed to update application status: ' . $e->getMessage(), 500);
         }
     }
+
+    /**
+     * Get applications by platform
+     * 
+     * @param string $platform
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getByPlatform($platform)
+    {
+        try {
+            $applications = $this->applicationService->getApplicationsByPlatform($platform);
+            return $this->successResponse(
+                ApplicationResource::collection($applications),
+                'Applications retrieved successfully'
+            );
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Error in getByPlatform: ' . $e->getMessage());
+            return $this->errorResponse('Failed to retrieve applications: ' . $e->getMessage(), 500);
+        }
+    }
+
+    // In your ApplicationController.php or similar
+    public function getApplicationProgress($appId, Request $request)
+    {
+        $workerId = $request->query('worker_id');
+
+        // If worker_id is provided, get progress for just that worker
+        if ($workerId) {
+            $progress = $this->applicationService->getApplicationProgressForWorker($appId, $workerId);
+        } else {
+            // Otherwise get overall progress across all workers
+            $progress = $this->applicationService->getApplicationProgress($appId);
+        }
+
+        return $this->successResponse(
+            $progress,
+            'Application progress retrieved successfully'
+        );
+    }
+
+
 }

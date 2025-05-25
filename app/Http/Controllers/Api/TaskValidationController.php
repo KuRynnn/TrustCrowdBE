@@ -11,12 +11,6 @@ use App\Http\Requests\Api\TaskValidation\CreateTaskValidationRequest;
 use App\Traits\ApiResponse;
 use Illuminate\Http\Request;
 
-/**
- * @OA\Tag(
- *     name="Task Validations",
- *     description="API Endpoints for Task Validation management"
- * )
- */
 class TaskValidationController extends Controller
 {
     use ApiResponse;
@@ -32,64 +26,6 @@ class TaskValidationController extends Controller
         $this->uatTaskService = $uatTaskService;
     }
 
-    /**
-     * @OA\Post(
-     *     path="/task-validations",
-     *     tags={"Task Validations"},
-     *     summary="Create new task validation",
-     *     description="Creates a new task validation by QA Specialist",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\RequestBody(
-     *         required=true,
-     *         @OA\JsonContent(
-     *             required={"task_id", "qa_id", "validation_status"},
-     *             @OA\Property(property="task_id", type="string", format="uuid"),
-     *             @OA\Property(property="qa_id", type="string", format="uuid"),
-     *             @OA\Property(
-     *                 property="validation_status",
-     *                 type="string",
-     *                 enum={"Pass Verified", "Rejected", "Need Revision"},
-     *                 example="Pass Verified"
-     *             ),
-     *             @OA\Property(property="comments", type="string", example="Task completed successfully")
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=201,
-     *         description="Task validation created successfully",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Task validation created successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="validation_id", type="string", format="uuid"),
-     *                 @OA\Property(property="task_id", type="string", format="uuid"),
-     *                 @OA\Property(property="qa_id", type="string", format="uuid"),
-     *                 @OA\Property(
-     *                     property="validation_status",
-     *                     type="string",
-     *                     enum={"Pass Verified", "Rejected", "Need Revision"},
-     *                     example="Pass Verified"
-     *                 ),
-     *                 @OA\Property(property="comments", type="string", example="Task completed successfully"),
-     *                 @OA\Property(property="validated_at", type="string", format="datetime"),
-     *                 @OA\Property(property="created_at", type="string", format="datetime"),
-     *                 @OA\Property(property="updated_at", type="string", format="datetime")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=422,
-     *         description="Validation error or bug reports not validated",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="All bug reports must be validated before validating the task"),
-     *             @OA\Property(property="data", type="null")
-     *         )
-     *     )
-     * )
-     */
     public function store(CreateTaskValidationRequest $request)
     {
         try {
@@ -105,56 +41,6 @@ class TaskValidationController extends Controller
         }
     }
 
-    /**
-     * @OA\Get(
-     *     path="/task-validations/{taskId}",
-     *     tags={"Task Validations"},
-     *     summary="Get task validation",
-     *     description="Returns details of a specific task validation",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="taskId",
-     *         in="path",
-     *         required=true,
-     *         description="UAT Task ID",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Successful operation",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Task validation retrieved successfully"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="validation_id", type="string", format="uuid"),
-     *                 @OA\Property(property="task_id", type="string", format="uuid"),
-     *                 @OA\Property(property="qa_id", type="string", format="uuid"),
-     *                 @OA\Property(
-     *                     property="validation_status",
-     *                     type="string",
-     *                     enum={"Pass Verified", "Rejected", "Need Revision"},
-     *                     example="Pass Verified"
-     *                 ),
-     *                 @OA\Property(property="comments", type="string", example="Task completed successfully"),
-     *                 @OA\Property(property="validated_at", type="string", format="datetime"),
-     *                 @OA\Property(property="created_at", type="string", format="datetime"),
-     *                 @OA\Property(property="updated_at", type="string", format="datetime")
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Task validation not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Task validation not found"),
-     *             @OA\Property(property="data", type="null")
-     *         )
-     *     )
-     * )
-     */
     public function show($taskId)
     {
         try {
@@ -168,57 +54,6 @@ class TaskValidationController extends Controller
         }
     }
 
-    /**
-     * @OA\Get(
-     *     path="/task-validations/check-readiness/{taskId}",
-     *     tags={"Task Validations"},
-     *     summary="Check if task is ready for validation",
-     *     description="Checks if all bug reports for a task have been validated",
-     *     security={{"bearerAuth":{}}},
-     *     @OA\Parameter(
-     *         name="taskId",
-     *         in="path",
-     *         required=true,
-     *         description="UAT Task ID",
-     *         @OA\Schema(type="string", format="uuid")
-     *     ),
-     *     @OA\Response(
-     *         response=200,
-     *         description="Successful operation",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="success"),
-     *             @OA\Property(property="message", type="string", example="Task is ready for validation"),
-     *             @OA\Property(
-     *                 property="data",
-     *                 type="object",
-     *                 @OA\Property(property="is_ready", type="boolean", example=true),
-     *                 @OA\Property(property="total_bug_reports", type="integer", example=3),
-     *                 @OA\Property(property="validated_bug_reports", type="integer", example=3),
-     *                 @OA\Property(property="unvalidated_bug_reports", type="integer", example=0),
-     *                 @OA\Property(
-     *                     property="bug_validations",
-     *                     type="array",
-     *                     @OA\Items(
-     *                         type="object",
-     *                         @OA\Property(property="bug_id", type="string", format="uuid"),
-     *                         @OA\Property(property="validation_status", type="string", example="Valid"),
-     *                         @OA\Property(property="comments", type="string", example="Bug confirmed")
-     *                     )
-     *                 )
-     *             )
-     *         )
-     *     ),
-     *     @OA\Response(
-     *         response=404,
-     *         description="Task not found",
-     *         @OA\JsonContent(
-     *             @OA\Property(property="status", type="string", example="error"),
-     *             @OA\Property(property="message", type="string", example="Task not found"),
-     *             @OA\Property(property="data", type="null")
-     *         )
-     *     )
-     * )
-     */
     public function checkTaskReadiness($taskId)
     {
         try {
@@ -235,7 +70,15 @@ class TaskValidationController extends Controller
 
             $validatedCount = $validatedBugReports->count();
             $unvalidatedCount = $totalBugReports - $validatedCount;
-            $isReady = ($unvalidatedCount === 0) && ($task->status === 'Completed');
+
+            // Get evidence count
+            $evidenceCount = $task->evidence()->count();
+
+            // A task is ready if either:
+            // 1. It has bugs and all bugs are validated
+            // 2. It has no bugs but has evidence
+            $isReady = ($totalBugReports > 0 && $unvalidatedCount === 0) ||
+                ($totalBugReports === 0 && $evidenceCount > 0);
 
             // Get validation details for all bug reports
             $bugValidations = $validatedBugReports->map(function ($bugReport) {
@@ -252,11 +95,49 @@ class TaskValidationController extends Controller
                 'validated_bug_reports' => $validatedCount,
                 'unvalidated_bug_reports' => $unvalidatedCount,
                 'task_status' => $task->status,
+                'evidence_count' => $evidenceCount,
                 'bug_validations' => $bugValidations
             ], $isReady ? 'Task is ready for validation' : 'Task is not ready for validation');
 
         } catch (\Exception $e) {
             return $this->errorResponse($e->getMessage(), 404);
         }
+    }
+
+    public function validateTask(CreateTaskValidationRequest $request)
+    {
+        try {
+            $validation = $this->taskValidationService->validateTask(
+                $request->task_id,
+                $request->qa_id,
+                $request->validation_status,
+                $request->comments
+            );
+
+            return $this->successResponse(
+                new TaskValidationResource($validation),
+                'Task validated successfully'
+            );
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Task validation failed: ' . $e->getMessage());
+
+            // Return friendly error message
+            return $this->errorResponse($e->getMessage(), 422);
+        }
+    }
+
+    public function getByTaskId($taskId)
+    {
+        $validation = $this->taskValidationService->getValidationByTaskId($taskId);
+
+        if (!$validation) {
+            return $this->errorResponse('No validation found for this task', 404);
+        }
+
+        return $this->successResponse(
+            new TaskValidationResource($validation),
+            'Task validation retrieved successfully'
+        );
     }
 }

@@ -1,6 +1,5 @@
 <?php
 
-// app/Repositories/TestCase/TestCaseRepository.php
 namespace App\Repositories\TestCase;
 
 use App\Models\TestCase;
@@ -71,5 +70,21 @@ class TestCaseRepository extends BaseRepository
     {
         $testCase = $this->findById($id);
         return $testCase ? $testCase->delete() : null;
+    }
+
+    // New method to migrate existing test cases to the new format
+    public function migrateToGivenWhenThen($id, $given, $when, $then)
+    {
+        $testCase = $this->findById($id);
+        if (!$testCase) {
+            return null;
+        }
+
+        $testCase->given_context = $given;
+        $testCase->when_action = $when;
+        $testCase->then_result = $then;
+        $testCase->save();
+
+        return $testCase;
     }
 }
