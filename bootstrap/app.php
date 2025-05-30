@@ -12,6 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         //
+        // Tambahkan TrustProxies middleware di sini
+        $middleware->trustProxies(at:'*');
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //
