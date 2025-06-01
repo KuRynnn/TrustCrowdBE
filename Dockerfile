@@ -30,5 +30,5 @@ COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
 COPY . /app
 
 RUN composer install 
-RUN npm run build
+# RUN npm run build
 EXPOSE 8000

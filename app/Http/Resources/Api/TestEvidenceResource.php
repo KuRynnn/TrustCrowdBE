@@ -12,7 +12,7 @@ class TestEvidenceResource extends JsonResource
             'task_id' => $this->task_id,
             'step_number' => $this->step_number,
             'step_description' => $this->step_description,
-            'screenshot_url' => $this->screenshot_url,
+            'screenshot_url' => url($this->screenshot_url),
             'notes' => $this->notes,
             'context' => $this->context, // Add the context field
             'created_at' => $this->created_at->toDateTimeString(),
